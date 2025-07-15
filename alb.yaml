@@ -5,7 +5,7 @@ Parameters:
   NetworkUser:
     Type: String
     Description: Nombre del usuario de red
-    Default: pfrias
+    Default: jealzat
   ExistingVPCId:
     Type: AWS::EC2::VPC::Id
     Description: ID de la VPC existente
