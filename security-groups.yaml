@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Security groups para entornos DEV y PDN
+
+Parameters:
+  NetworkUser:
+    Type: String
+    Description: Nombre del usuario de red
+    Default: pfrias
+  ExistingVPCId:
+    Type: AWS::EC2::VPC::Id
+    Description: ID de la VPC existente
+
+Resources:
+  SecurityGroupPDN:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Seguridad entorno PDN
+      VpcId: !Ref ExistingVPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub LDC-AUTH-SG-${NetworkUser}-PDN
+
+  SecurityGroupDEV:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Seguridad entorno DEV
+      VpcId: !Ref ExistingVPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub LDC-AUTH-SG-${NetworkUser}-DEV
+
+Outputs:
+  SecurityGroupDEV:
+    Value: !Ref SecurityGroupDEV
+    Export:
+      Name: !Sub LDC-AUTH-SG-${NetworkUser}-DEV
+
+  SecurityGroupPDN:
+    Value: !Ref SecurityGroupPDN
+    Export:
+      Name: !Sub LDC-AUTH-SG-${NetworkUser}-PDN

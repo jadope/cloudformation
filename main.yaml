@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack principal que orquesta todos los recursos
+Parameters:
+  NetworkUser:
+    Type: String
+    Description: Nombre del usuario de red
+    Default: jealzat
+  MaxPDNInstances:
+    Type: Number
+    Description: Numero de instancias maximas
+    Default: 3
+  ExistingVPCId:
+    Type: AWS::EC2::VPC::Id
+    Description: ID de la VPC existente
+    Default: vpc-05835abff54f99d3c
+  ExistingIGWId:
+    Type: String
+    Description: ID de la IGW existente
+    Default: igw-02aab08fb6d2a2d3d
+  PublicSubnetAZ1Id:
+    Type: String
+    Description: ID de la subnet publica en AZ1
+    Default: subnet-042b24c54cf65dbe9
+  PublicSubnetAZ2Id:
+    Type: String
+    Description: ID de la subnet publica en AZ2
+    Default: subnet-02ace4d7ee3e6c798
+  PrivateSubnetAZ1Id:
+    Type: String
+    Description: ID de la subnet privada en AZ1
+    Default: subnet-00d96c6f68c55be31
+  PrivateSubnetAZ2Id:
+    Type: String
+    Description: ID de la subnet privada en AZ2
+    Default: subnet-0bfeea10447301510
+Resources:
+  SecurityGroupsStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://cloudformationpfriastest.s3.us-east-1.amazonaws.com/jealzat/security-groups.yaml
+      Parameters:
+        NetworkUser: !Ref NetworkUser
+        ExistingVPCId: !Ref ExistingVPCId
+  EC2Stack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - SecurityGroupsStack
+    Properties:
+      TemplateURL: https://cloudformationpfriastest.s3.us-east-1.amazonaws.com/jealzat/ec2.yaml
+      Parameters:
+        NetworkUser: !Ref NetworkUser
+        PrivateSubnetAZ1Id: !Ref PrivateSubnetAZ1Id
+        PrivateSubnetAZ2Id: !Ref PrivateSubnetAZ2Id
+  ALBStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - SecurityGroupsStack
+      - EC2Stack
+    Properties:
+      TemplateURL: https://cloudformationpfriastest.s3.us-east-1.amazonaws.com/jealzat/alb.yaml
+      Parameters:
+        NetworkUser: !Ref NetworkUser
+        ExistingVPCId: !Ref ExistingVPCId
+        PublicSubnetAZ1Id: !Ref PublicSubnetAZ1Id
+        PublicSubnetAZ2Id: !Ref PublicSubnetAZ2Id
+  ASGStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - SecurityGroupsStack
+      - EC2Stack
+      - ALBStack
+    Properties:
+      TemplateURL: https://cloudformationpfriastest.s3.us-east-1.amazonaws.com/jealzat/asg.yaml
+      Parameters:
+        NetworkUser: !Ref NetworkUser
+        MaxPDNInstances: !Ref MaxPDNInstances
+        PrivateSubnetAZ1Id: !Ref PrivateSubnetAZ1Id
+        PrivateSubnetAZ2Id: !Ref PrivateSubnetAZ2Id
+Outputs:
+  Message:
+    Value: "Infraestructura desplegada para ${NetworkUser}"

@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Auto Scaling Group para entorno PDN
+
+Parameters:
+  NetworkUser:
+    Type: String
+    Description: Nombre del usuario de red
+    Default: pfrias
+    
+  MaxPDNInstances:
+    Type: Number
+    Description: Numero de instancias maximas
+    Default: 3
+
+  PrivateSubnetAZ1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: ID de la subnet privada en AZ1
+  PrivateSubnetAZ2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: ID de la subnet privada en AZ2
+
+Resources:
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub LDC-AUTH-LT-${NetworkUser}-PDN
+      LaunchTemplateData:
+        InstanceType: t2.micro
+        ImageId: ami-0c2b8ca1dad447f8a
+        SecurityGroupIds:
+          - !ImportValue
+            Fn::Sub: LDC-AUTH-SG-${NetworkUser}-PDN
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            exec > /var/log/user-data.log 2>&1
+            apt-get update -y
+            apt-get install -y docker.io git
+            systemctl enable docker
+            systemctl start docker
+            git clone https://github.com/nastab/cloudformation-challenge.git
+            cd cloudformation-challenge/
+            docker compose up -d
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub LDC-AUTH-ASG-EC2-${NetworkUser}-PDN
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub LDC-AUTH-ASG-${NetworkUser}-PDN
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: 1
+      MaxSize: !Ref MaxPDNInstances
+      DesiredCapacity: 1
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnetAZ1Id
+        - !Ref PrivateSubnetAZ2Id
+      Tags:
+        - Key: Name
+          Value: !Sub LDC-AUTH-ASG-EC2-${NetworkUser}-PDN
+          PropagateAtLaunch: true
+
+Outputs:
+  ASGName:
+    Value: !Ref AutoScalingGroup
+    Export:
+      Name: !Sub LDC-AUTH-ASG-${NetworkUser}-PDN
+
